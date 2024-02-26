@@ -1,13 +1,36 @@
 import json
 import pandas as pd
+import requests
+import os
 from openpyxl import load_workbook
 from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
 
+url_data = "https://hpe-my.sharepoint.com/personal/victor_rubinec_hpe_com/_layouts/15/download.aspx?UniqueId=27d1c8d4-8dc1-46c0-81db-95a9a9842988&Translate=false&tempauth=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwMDAwMDAwMy0wMDAwLTBmZjEtY2UwMC0wMDAwMDAwMDAwMDAvaHBlLW15LnNoYXJlcG9pbnQuY29tQDEwNWIyMDYxLWI2NjktNGIzMS05MmFjLTI0ZDMwNGQxOTVkYyIsImlzcyI6IjAwMDAwMDAzLTAwMDAtMGZmMS1jZTAwLTAwMDAwMDAwMDAwMCIsIm5iZiI6IjE3MDg5NzMwOTUiLCJleHAiOiIxNzA4OTc2Njk1IiwiZW5kcG9pbnR1cmwiOiI5Szk2MDk5OE1QL3NLQ0dxNkNzQVJTcDR3MytmODdkaXpnRFJqZitQNFQ0PSIsImVuZHBvaW50dXJsTGVuZ3RoIjoiMTQ5IiwiaXNsb29wYmFjayI6IlRydWUiLCJjaWQiOiJmekQzQ3BXT0N3c0dOc2d2c0crdFpBPT0iLCJ2ZXIiOiJoYXNoZWRwcm9vZnRva2VuIiwic2l0ZWlkIjoiWldNeU5EWm1NbUV0TmpjMVpTMDBOalF6TFRobFl6WXRNREZqTURjMVptSmtNV1V6IiwiYXBwX2Rpc3BsYXluYW1lIjoiR3JhcGggRXhwbG9yZXIiLCJnaXZlbl9uYW1lIjoiVmljdG9yIiwiZmFtaWx5X25hbWUiOiJSdWJpbmVjIiwiYXBwaWQiOiJkZThiYzhiNS1kOWY5LTQ4YjEtYThhZC1iNzQ4ZGE3MjUwNjQiLCJ0aWQiOiIxMDViMjA2MS1iNjY5LTRiMzEtOTJhYy0yNGQzMDRkMTk1ZGMiLCJ1cG4iOiJ2aWN0b3IucnViaW5lY0BocGUuY29tIiwicHVpZCI6IjEwMDMyMDAyN0Q1Q0VFNTIiLCJjYWNoZWtleSI6IjBoLmZ8bWVtYmVyc2hpcHwxMDAzMjAwMjdkNWNlZTUyQGxpdmUuY29tIiwic2NwIjoiZ3JvdXAucmVhZCBteWZpbGVzLnJlYWQgYWxscHJvZmlsZXMucmVhZCIsInR0IjoiMiIsImlwYWRkciI6IjIwLjE5MC4xNzMuMjQifQ.SHk5DmgASB6J6ro7Tj1rAz9L3WK1PXu18GzuMZR55NU&ApiVersion=2.0"
+url_template = "https://hpe-my.sharepoint.com/personal/victor_rubinec_hpe_com/_layouts/15/download.aspx?UniqueId=2c40380b-0eb8-4510-80f2-35f446937c4e&Translate=false&tempauth=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwMDAwMDAwMy0wMDAwLTBmZjEtY2UwMC0wMDAwMDAwMDAwMDAvaHBlLW15LnNoYXJlcG9pbnQuY29tQDEwNWIyMDYxLWI2NjktNGIzMS05MmFjLTI0ZDMwNGQxOTVkYyIsImlzcyI6IjAwMDAwMDAzLTAwMDAtMGZmMS1jZTAwLTAwMDAwMDAwMDAwMCIsIm5iZiI6IjE3MDg5NzMwOTUiLCJleHAiOiIxNzA4OTc2Njk1IiwiZW5kcG9pbnR1cmwiOiJiWis0bGt3SW95UWVpVGdxV2lGQ2tvNU1iWFVYbUxQcmJ1Qmg4REZmVzhzPSIsImVuZHBvaW50dXJsTGVuZ3RoIjoiMTQ5IiwiaXNsb29wYmFjayI6IlRydWUiLCJjaWQiOiJmekQzQ3BXT0N3c0dOc2d2c0crdFpBPT0iLCJ2ZXIiOiJoYXNoZWRwcm9vZnRva2VuIiwic2l0ZWlkIjoiWldNeU5EWm1NbUV0TmpjMVpTMDBOalF6TFRobFl6WXRNREZqTURjMVptSmtNV1V6IiwiYXBwX2Rpc3BsYXluYW1lIjoiR3JhcGggRXhwbG9yZXIiLCJnaXZlbl9uYW1lIjoiVmljdG9yIiwiZmFtaWx5X25hbWUiOiJSdWJpbmVjIiwiYXBwaWQiOiJkZThiYzhiNS1kOWY5LTQ4YjEtYThhZC1iNzQ4ZGE3MjUwNjQiLCJ0aWQiOiIxMDViMjA2MS1iNjY5LTRiMzEtOTJhYy0yNGQzMDRkMTk1ZGMiLCJ1cG4iOiJ2aWN0b3IucnViaW5lY0BocGUuY29tIiwicHVpZCI6IjEwMDMyMDAyN0Q1Q0VFNTIiLCJjYWNoZWtleSI6IjBoLmZ8bWVtYmVyc2hpcHwxMDAzMjAwMjdkNWNlZTUyQGxpdmUuY29tIiwic2NwIjoiZ3JvdXAucmVhZCBteWZpbGVzLnJlYWQgYWxscHJvZmlsZXMucmVhZCIsInR0IjoiMiIsImlwYWRkciI6IjIwLjE5MC4xNzMuMjQifQ.EER7zo96vZa7x3QZnfdkOlmaSJDDnzoFB48nnM6j3eY&ApiVersion=2.0"
+
+def download_file(url, filename):
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(filename, 'wb') as f:
+            f.write(response.content)
+        print("Download completo.")
+    else:
+        print("Falha ao baixar o arquivo.")
+
+if not os.path.exists('template.xlsx'):
+    download_file(url_template, "template.xlsx")
+    
+if not os.path.exists('data.json'):
+    download_file(url_data, "data.json")
+
 app_config = json.load(open('app_config.json'))
 data = json.load(open('data.json'))
 df = pd.DataFrame(data['cliente'])
+
+janela = Tk()
+janela.title("Auto Faturamento")
 
 def buscar_por_cnpj(df, cnpj):
     cnpj = cnpj.replace('.', '').replace('/', '').replace('-', '')
@@ -44,9 +67,6 @@ def criar_xlsx(cliente, diretorio_saida):
         print(f'Cliente encontrado: {cliente["nome_cliente"].values[0]}')
     else:
         print(f'Cliente com CNPJ {cnpj_input} não encontrado.')
-
-janela = Tk()
-janela.title("Auto Faturamento")
 
 # funções da interface
 def selecionar_diretorio():
