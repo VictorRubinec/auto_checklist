@@ -24,11 +24,11 @@ app = {
     
     "Buttom_head_color" : "#e3e8ed",
     "Buttom_salvar_color" : "#d5e7f7",
-    "Buttom_diretorio_color" : "#d1efec",
+    "Buttom_arquivo_color" : "#d1efec",
     
     "Buttom_head_color_active" : "#b7c7cf",
     "Buttom_salvar_color_active" : "#74b0e6",
-    "Buttom_diretorio_color_active" : "#3bbaad",
+    "Buttom_arquivo_color_active" : "#3bbaad",
     
     "titulo_color" : "#293845",
     
@@ -36,7 +36,7 @@ app = {
     "cpnj_label" : "Digite o CNPJ desejado para o documento:",
     
     "Buttom_salvar" : "Salvar",
-    "Buttom_diretorio" : "Diretório destino",
+    "Buttom_arquivo" : "Selecionar Arquivo",
     "Buttom_ajuda" : "Ajuda",
     "Buttom_sobre" : "Sobre",
 }
@@ -68,7 +68,10 @@ if not os.path.exists('data.json'):
 if not os.path.exists('logo.png'):
     download_file(url_data, "logo.png")
 if not os.path.exists('app_config.json'):
-    app_config = {"diretorio": ""}
+    app_config = {
+        "diretorio": "",
+        "arquivo": ""
+        }
     json.dump(app_config, open('app_config.json', 'w'), indent=4)
 
 # Carregando os dados em variáveis
@@ -95,7 +98,7 @@ def buscar_por_cnpj(df, cnpj):
     return pd.DataFrame()
 
 # Função para criar o arquivo xlsx
-def criar_xlsx(cliente, diretorio_saida):
+def criar_xlsx(cliente):
     template = "template.xlsx"
     arquivo_saida = f"cliente_{cliente['CNPJ'].values[0]}.xlsx"
     
@@ -109,7 +112,7 @@ def criar_xlsx(cliente, diretorio_saida):
     ws['G7'] = cliente['cidade'].values[0].title()
     ws['H8'] = cliente['party_id'].values[0]
     
-    wb.save(f"{diretorio_saida}/{arquivo_saida}")
+    wb.save(f"{app_config['diretorio']}/{arquivo_saida}")
     
     print(f'Arquivo {arquivo_saida} gerado com sucesso!')
     
@@ -118,23 +121,60 @@ def criar_xlsx(cliente, diretorio_saida):
     else:
         print(f'Cliente com CNPJ {input} não encontrado.')
 
-# Função para selecionar o diretório de saída do arquivo
-def selecionar_diretorio():
-    diretorio_saida = filedialog.askdirectory()
-    diretorio_label.config(text=diretorio_saida)
-    app_config['diretorio'] = diretorio_saida
-    json.dump(app_config, open('app_config.json', 'w'), indent=4)
+# # Função para selecionar o diretório de saída do arquivo
+# def selecionar_diretorio():
+#     diretorio_saida = filedialog.askdirectory()
+#     diretorio_label.config(text=diretorio_saida)
+#     app_config['diretorio'] = diretorio_saida
+#     json.dump(app_config, open('app_config.json', 'w'), indent=4)
     
 # Função para salvar o arquivo no diretório selecionado
 def salvar():
     if app_config['diretorio'] == "":
         messagebox.showerror("Erro", "Selecione um diretório de saída!")
         return
-    diretorio_saida = app_config['diretorio']
     cliente = buscar_por_cnpj(df, input.get())
-    criar_xlsx(cliente, diretorio_saida)
+    # criar_xlsx(cliente)
+    atualizar_arquivo(cliente)
     messagebox.showinfo("Sucesso", "Arquivo gerado com sucesso!")
 
+def atualizar_arquivo(cliente):
+    arquivo = load_workbook(f"{app_config['diretorio']}/{app_config['arquivo']}")
+    atualizada = arquivo['sheet2']
+    
+    # arquivo_saida = f"cliente_{app_config['diretorio'][-14:-4]}.xlsx"
+    
+    # atualizar os valores
+    atualizada['C4'] = cliente['CNPJ'].values[0]
+    atualizada['G4'] = cliente['nome_cliente'].values[0].title()
+    atualizada['G5'] = cliente['endereco_fisico'].values[0].title()
+    atualizada['G6'] = cliente['estado'].values[0].title()
+    atualizada['G7'] = cliente['cidade'].values[0].title()
+    atualizada['H8'] = cliente['party_id'].values[0]
+    
+    # atualizar o arquivo
+    arquivo.save(f"{app_config['diretorio']}/{app_config['arquivo']}")
+    
+    if not cliente.empty:
+        print(f'Cliente encontrado: {cliente["nome_cliente"].values[0]}')
+    else:
+        print(f'Cliente com CNPJ {input} não encontrado.')
+    
+
+def selecionar_arquivo():
+    diretorio_saida = filedialog.askopenfilename(filetypes=[("Arquivos Excel", "*.xlsx")])
+    resultado = diretorio_saida.split("/")
+    
+    diretorio = "/".join(resultado[:-1])
+    arquivo = resultado[-1]
+    
+    diretorio_label.config(text=f"{diretorio}/{arquivo}")
+    
+    app_config['diretorio'] = diretorio
+    app_config['arquivo'] = arquivo
+    
+    json.dump(app_config, open('app_config.json', 'w'), indent=4)
+    
 # ========================================================================================================
 # Interface
 # ========================================================================================================
@@ -161,8 +201,8 @@ btn_grid_body = Frame(body, width=100, height=100)
 
 btn1 = Button(btn_grid_body, text=app["Buttom_salvar"], font=("Arial", 12), background=app["Buttom_salvar_color"],
                 padx=15, pady=5, border=1, activebackground=app["Buttom_salvar_color_active"], cursor="hand2", command=salvar)
-btn2 = Button(btn_grid_body, text=app["Buttom_diretorio"], font=("Arial", 12), background=app["Buttom_diretorio_color"],
-                padx=15, pady=5, border=1, activebackground=app["Buttom_diretorio_color_active"], cursor="hand2", command=selecionar_diretorio)
+btn2 = Button(btn_grid_body, text=app["Buttom_arquivo"], font=("Arial", 12), background=app["Buttom_arquivo_color"],
+                padx=15, pady=5, border=1, activebackground=app["Buttom_arquivo_color_active"], cursor="hand2", command=selecionar_arquivo)
 btn3 = Button(btn_grid_head, text=app["Buttom_ajuda"], font=("Arial", 12), background=app["Buttom_head_color"],
                 padx=15, pady=5, border=1, activebackground=app["Buttom_head_color_active"], cursor="hand2")
 btn4 = Button(btn_grid_head, text=app["Buttom_sobre"], font=("Arial", 12), background=app["Buttom_head_color"],
@@ -191,7 +231,7 @@ body.pack_propagate(False)
 cnpj_label.grid(row=0, column=0, padx=5, pady=5)
 input.grid(row=1, column=0, padx=15)
 
-btn_grid_body.grid(row=2, column=1, padx=15)
+btn_grid_body.grid(row=2, column=1)
 btn2.grid(row=0, column=0, padx=5)
 btn1.grid(row=0, column=1, padx=5)
 
