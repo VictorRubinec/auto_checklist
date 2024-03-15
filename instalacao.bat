@@ -1,6 +1,6 @@
 @echo off
-echo Instalando bibliotecas pandas, openpyxl e requests...
-pip install pandas openpyxl requests
+echo Instalando bibliotecas pandas, openpyxl, customtkinter e requests.
+pip install pandas openpyxl customtkinter requests
 
 if %errorlevel% neq 0 (
     echo Falha ao instalar bibliotecas.

@@ -1,246 +1,230 @@
 import json
 import pandas as pd
-import requests
 import os
 from openpyxl import load_workbook
-from tkinter import *
 from tkinter import messagebox
 from tkinter import filedialog
+import customtkinter as ctk
+from PIL import Image
+    
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-# ========================================================================================================
-# Configuração
-# ========================================================================================================
+        self.title("Auto Faturamento")
+        self.geometry("700x400")
+        
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
+        
+        # Puxando imagens do assets
+        image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "assets")
+        self.logo_image = ctk.CTkImage(Image.open(os.path.join(image_path, "logo_light.png")), 
+            dark_image=Image.open(os.path.join(image_path, "logo_dark.png")), size=(130, 50))
+        self.home_image = ctk.CTkImage(Image.open(os.path.join(image_path, "home_light.png")),
+            dark_image=Image.open(os.path.join(image_path, "home_dark.png")), size=(20, 20))
+        self.ajuda_image = ctk.CTkImage(Image.open(os.path.join(image_path, "ajuda_light.png")),
+            dark_image=Image.open(os.path.join(image_path, "ajuda_dark.png")), size=(20, 20))
+        self.configuracao_image = ctk.CTkImage(Image.open(os.path.join(image_path, "configuracao_light.png")),
+            dark_image=Image.open(os.path.join(image_path, "configuracao_dark.png")), size=(20, 20))
+        
+        
+        self.navigation_frame = ctk.CTkFrame(self, corner_radius=0)
+        self.navigation_frame.grid(row=0, column=0, sticky="nsew")
+        self.navigation_frame.grid_rowconfigure(4, weight=1)
 
-app = {
-    "App_Name" : "Auto Faturamento",
-    "App_Version" : "1.0",
-    "App_Logo" : "logo.png",
-    "App_Author" : "Victor Zanin Rubinec",
-    
-    "Conf_Geometry" : "600x225+100+100",
-    
-    "Header_color" : "#1aae9f",
-    "Footer_color" : "#4b5c6b",
-    
-    "Buttom_head_color" : "#e3e8ed",
-    "Buttom_salvar_color" : "#d5e7f7",
-    "Buttom_arquivo_color" : "#d1efec",
-    
-    "Buttom_head_color_active" : "#b7c7cf",
-    "Buttom_salvar_color_active" : "#74b0e6",
-    "Buttom_arquivo_color_active" : "#3bbaad",
-    
-    "titulo_color" : "#293845",
-    
-    "titulo" : "Auto Faturamento",
-    "cpnj_label" : "Digite o CNPJ desejado para o documento:",
-    
-    "Buttom_salvar" : "Salvar",
-    "Buttom_arquivo" : "Selecionar Arquivo",
-    "Buttom_ajuda" : "Ajuda",
-    "Buttom_sobre" : "Sobre",
-}
+        self.navigation_frame_label = ctk.CTkLabel(self.navigation_frame, text="Auto Faturamento",
+            compound="left", font=ctk.CTkFont(size=20, weight="bold"))
+        self.navigation_frame_label.grid(row=0, column=0, padx=20, pady=20)
+        
+        self.home_button = ctk.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Home",
+            fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+            image=self.home_image, anchor="w", command=self.home_button_event)
+        self.home_button.grid(row=1, column=0, sticky="ew")
 
-# Urls dos arquivos que estão no onedrive
-url_data = "https://graph.microsoft.com/v1.0/me/drive/root/children/Auto_Financiamento/children"
-token = "eyJ0eXAiOiJKV1QiLCJub25jZSI6Im90Nkd0QjBxN0N3NEY4ZzBlaTlDejR3aEZhR0lLem0zaVQzSmtSS0xPelkiLCJhbGciOiJSUzI1NiIsIng1dCI6IlhSdmtvOFA3QTNVYVdTblU3Yk05blQwTWpoQSIsImtpZCI6IlhSdmtvOFA3QTNVYVdTblU3Yk05blQwTWpoQSJ9.eyJhdWQiOiIwMDAwMDAwMy0wMDAwLTAwMDAtYzAwMC0wMDAwMDAwMDAwMDAiLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC8xMDViMjA2MS1iNjY5LTRiMzEtOTJhYy0yNGQzMDRkMTk1ZGMvIiwiaWF0IjoxNzA5MDU2Mzk4LCJuYmYiOjE3MDkwNTYzOTgsImV4cCI6MTcwOTE0MzA5OCwiYWNjdCI6MCwiYWNyIjoiMSIsImFpbyI6IkFUUUF5LzhXQUFBQTJsd1lCY2dWQlk4NXcwcFZvb3VZTFRSanUzS0Jtc3orYnpkS3hNdFo5UE50NlQ2MHNMU28rczlaaUxkazRTUTQiLCJhbXIiOlsicnNhIl0sImFwcF9kaXNwbGF5bmFtZSI6IkdyYXBoIEV4cGxvcmVyIiwiYXBwaWQiOiJkZThiYzhiNS1kOWY5LTQ4YjEtYThhZC1iNzQ4ZGE3MjUwNjQiLCJhcHBpZGFjciI6IjAiLCJmYW1pbHlfbmFtZSI6IlJ1YmluZWMiLCJnaXZlbl9uYW1lIjoiVmljdG9yIiwiaWR0eXAiOiJ1c2VyIiwiaXBhZGRyIjoiMTc5LjI0NS43MC4xNDIiLCJuYW1lIjoiUnViaW5lYywgVmljdG9yIiwib2lkIjoiNjcyMDkyZGMtOTFhNy00ZGViLWE3YjQtZjI0ZjdmMWQxMWQwIiwib25wcmVtX3NpZCI6IlMtMS01LTIxLTgzOTUyMjExNS0xMzgzMzg0ODk4LTUxNTk2Nzg5OS02NzE4Mjc5IiwicGxhdGYiOiIzIiwicHVpZCI6IjEwMDMyMDAyN0Q1Q0VFNTIiLCJyaCI6IjAuQVMwQVlTQmJFR20yTVV1U3JDVFRCTkdWM0FNQUFBQUFBQUFBd0FBQUFBQUFBQUF0QUdRLiIsInNjcCI6IkFQSUNvbm5lY3RvcnMuUmVhZC5BbGwgQVBJQ29ubmVjdG9ycy5SZWFkV3JpdGUuQWxsIENoYXQuUmVhZFdyaXRlIERpcmVjdG9yeS5BY2Nlc3NBc1VzZXIuQWxsIERpcmVjdG9yeS5SZWFkLkFsbCBEaXJlY3RvcnkuUmVhZFdyaXRlLkFsbCBGaWxlcy5SZWFkIEdyb3VwLlJlYWQuQWxsIG9wZW5pZCBPcmdDb250YWN0LlJlYWQuQWxsIFBlb3BsZS5SZWFkIHByb2ZpbGUgUmVwb3J0cy5SZWFkLkFsbCBVc2VyLlJlYWQgZW1haWwiLCJzdWIiOiIxd1dHRFJsR3VBNUVHZUljY1BQdUtIZElZSG1BQzFpMDFNcTZwVXpiVVJnIiwidGVuYW50X3JlZ2lvbl9zY29wZSI6Ik5BIiwidGlkIjoiMTA1YjIwNjEtYjY2OS00YjMxLTkyYWMtMjRkMzA0ZDE5NWRjIiwidW5pcXVlX25hbWUiOiJ2aWN0b3IucnViaW5lY0BocGUuY29tIiwidXBuIjoidmljdG9yLnJ1YmluZWNAaHBlLmNvbSIsInV0aSI6Imx1QTZydDZGXzBXaEpaRGk1eGd4QUEiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbImI3OWZiZjRkLTNlZjktNDY4OS04MTQzLTc2YjE5NGU4NTUwOSJdLCJ4bXNfY2MiOlsiQ1AxIl0sInhtc19zc20iOiIxIiwieG1zX3N0Ijp7InN1YiI6Imt6M2g3UDJ4elFxaXd5c0xrR3VfdEJzUnVWbHhWOFRQa3EtbW94ZXY5Qk0ifSwieG1zX3RjZHQiOjE0MTY2MTUyMTl9.jQ9q42XS3ZIyywwsBoPxK7Oxlwtbg4SofQ5POAPeRZ5EfIASnqNBB6HbVppC1I_Kuri-a3PA8eYK7Fbbfw8vQurYSvjX5dRPqok9Mj7Avu6MOqtKoKrNs4EBRg0Tv-Z73U7ws1RnD4tqDBWIynyh2lBqAyrvUWJHhdZw2nXBkvRxo25KKfHZ6HRj9pgCWYkezSeDjZdf3NRw0sgpN8chJrwMqmiAk0z3a6Wn1FMpHuTcileBYU_Wqelk9wkIQS45MhJX4DK3cgGugB0kfAI7D2d3ynYyD2VqWI3zgM-ZdsHzK-TBQm3wRiEGvyIhN06imDGHn_tpAbIuK22l7LeVDA"
+        self.ajuda_button = ctk.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Ajuda",
+            fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+            image=self.ajuda_image, anchor="w", command=self.ajuda_button_event)
+        self.ajuda_button.grid(row=2, column=0, sticky="ew")
 
-# Função para baixar arquivos do onedrive
-def download_file(url, filename):
-    with open(filename, 'wb') as f:
-        response = requests.get(url, headers={"Authorization": f"Bearer {token}"})
-        arquivos = pd.DataFrame(response.json()['value'])
-        for item in arquivos.iterrows():
-            if (item[1]['name'] == filename):
-                url = item[1]['@microsoft.graph.downloadUrl']
-                response = requests.get(url)
-                f.write(response.content)
-        if response.status_code == 200:
-            print(f"Arquivo {filename} baixado com sucesso!")
+        self.configuracao_button = ctk.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Configuração",
+            fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+            image=self.configuracao_image, anchor="w", command=self.configuracao_button_event)
+        self.configuracao_button.grid(row=3, column=0, sticky="ew")
+        
+        self.logo_position = ctk.CTkLabel(self.navigation_frame, image=self.logo_image, compound="left", text="")
+        self.logo_position.grid(row=6, column=0, sticky="s",  pady=10)
+        
+        # Frame home
+        self.home_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.home_frame.grid_columnconfigure(1, weight=1)
+        self.home_frame.grid_rowconfigure(4, weight=1)
+        
+        # Componentes do frame home
+        self.cnpj_label = ctk.CTkLabel(self.home_frame, text="Digite o CPNJ desejado:", font=ctk.CTkFont(size=15))
+        self.cnpj_label.grid(row=0, column=0, padx=20, pady=15, sticky="w")
+
+        self.cnpj_input = ctk.CTkEntry(self.home_frame, font=ctk.CTkFont(size=15), width=400, height=40)
+        self.cnpj_input.grid(row=1, column=0, padx=30, sticky="e")
+        
+        self.arquivo_label = ctk.CTkLabel(self.home_frame, text="Selecione o arquivo:", font=ctk.CTkFont(size=15))
+        self.arquivo_label.grid(row=2, column=0, padx=20, pady=15, sticky="w")
+        
+        self.arquivo_input = ctk.CTkButton(self.home_frame, text=app_config["arquivo"], corner_radius=5, height=40, border_spacing=10,
+            width=400, text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), border_width=2, border_color=("gray70", "gray30"),
+            anchor="w", cursor="hand2", fg_color=("gray95", "gray20"), command=self.selecionar_arquivo)
+        self.arquivo_input.grid(row=3, column=0, padx=30, sticky="w")
+        
+        self.confirmar_button = ctk.CTkButton(self.home_frame, text="Confirmar", cursor="hand2", height=35, command=self.verificar_componentes)
+        self.confirmar_button.grid(row=6, column=0, padx=20, pady=20, sticky="se")
+        
+        # Frame ajuda
+        self.ajuda_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+
+        # Frame configuração
+        self.configuracao_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        
+        self.appearance_mode_menu = ctk.CTkOptionMenu(self.configuracao_frame, values=["System", "Dark", "Light"],
+            command=self.change_appearance_mode_event)
+        self.appearance_mode_menu.grid(row=0, column=0, padx=20, pady=20, sticky="s")
+        
+        self.select_frame_by_name("home")
+        
+    def buscar_por_cnpj(self, df, cnpj):
+        cnpj = cnpj.replace('.', '').replace('/', '').replace('-', '')
+        for cliente in df.iterrows():
+            if cnpj in cliente[1]["CNPJ"]:
+                valores = cliente[1]["CNPJ"].split(";")
+                for valor in valores:
+                    if cnpj in valor:
+                        cliente_encontrado = cliente[1].copy() 
+                        cliente_encontrado['CNPJ'] = valor 
+                        return pd.DataFrame([cliente_encontrado])
+        return pd.DataFrame()
+        
+    def verificar_componentes(self):
+        if not all([app_config['diretorio'], app_config['arquivo']]):
+            messagebox.showwarning("Aviso", "Selecione um arquivo para continuar.")
+            return
+        elif not self.cnpj_input.get():
+            messagebox.showwarning("Aviso", "Digite um CNPJ para continuar.")
+            return
+        elif len(self.cnpj_input.get()) != 14 or not self.cnpj_input.get().isdigit():
+            messagebox.showwarning("Aviso", "CNPJ inválido.")
+            return
+        elif not os.path.exists(os.path.join(app_config['diretorio'], app_config['arquivo'])):
+            messagebox.showwarning("Aviso", "Arquivo não encontrado.")
+            return
+        elif not self.verificar_planilha(os.path.join(app_config['diretorio'], app_config['arquivo'])):
+            messagebox.showwarning("Aviso", f"Planilha não possui a aba 'Checklist - Vendas'")
+            return
+        elif not self.verificar_campo():
+            messagebox.showwarning("Aviso", "Planilha possui campos preenchidos.")
+            return
+
+        cliente = self.buscar_por_cnpj(df, self.cnpj_input.get())
+        self.confirmar(cliente)
+            
+    def verificar_planilha(self, diretorio):
+        try:
+            workbook = load_workbook(diretorio)
+            return "Checklist - Vendas" in workbook.sheetnames
+        except Exception as e:
+            print(f"Ocorreu um erro ao tentar verificar a planilha: {e}")
+            return False
+
+    def verificar_campo(self):
+        try:
+            workbook = load_workbook(os.path.join(app_config['diretorio'], app_config['arquivo']))
+            sheet = workbook["Checklist - Vendas"]
+            celulas = ['C4', 'G4', 'G5', 'G6', 'G7', 'H8']
+            for cell in celulas:
+                print(sheet[cell].value)
+                if sheet[cell].value != None:
+                    return False
+            return True
+        except Exception as e:
+            print(f"Ocorreu um erro ao tentar verificar os campos: {e}")
+            return False
+    
+    def confirmar(self, cliente):
+        arquivo = load_workbook(f"{app_config['diretorio']}/{app_config['arquivo']}") 
+        planilha = arquivo['Checklist - Vendas']
+        
+        if cliente.empty:
+            messagebox.showwarning("Aviso", "Cliente não encontrado.")
+            return
+        elif len(cliente) > 1:
+            messagebox.showwarning("Aviso", "Cliente duplicado.")
+            return
         else:
-           print(f"Erro ao baixar o arquivo {filename}!")
+            # atualizar os valores
+            planilha['C4'] = cliente['CNPJ'].values[0]
+            planilha['G4'] = cliente['nome_cliente'].values[0].title()
+            planilha['G5'] = cliente['endereco_fisico'].values[0].title()
+            planilha['G6'] = cliente['estado'].values[0].title()
+            planilha['G7'] = cliente['cidade'].values[0].title()
+            planilha['H8'] = cliente['party_id'].values[0]
+            
+            # atualizar o arquivo
+            arquivo.save(f"{app_config['diretorio']}/{app_config['arquivo']}")
+            print("Cliente atualizado com sucesso.")
+            
+    def selecionar_arquivo(self):
+        diretorio_saida = filedialog.askopenfilename(filetypes=[("Arquivos Excel", "*.xlsx")])
+        if diretorio_saida:
+            resultado = diretorio_saida.split("/")
+            diretorio = "/".join(resultado[:-1])
+            arquivo = resultado[-1]
+            if self.verificar_planilha(diretorio_saida):
+                self.arquivo_input.configure(text=arquivo)
+                app_config['diretorio'] = diretorio
+                app_config['arquivo'] = arquivo
+                json.dump(app_config, open("app_config.json", 'w'), indent=4)
+        
+    def select_frame_by_name(self, name):
+        self.home_button.configure(fg_color=("gray75", "gray25") if name == "home" else "transparent")
+        self.ajuda_button.configure(fg_color=("gray75", "gray25") if name == "ajuda" else "transparent")
+        self.configuracao_button.configure(fg_color=("gray75", "gray25") if name == "configuracao" else "transparent")
 
-# Verificando se os arquivos já existem, caso não existam, baixar ou criar
-if not os.path.exists('template.xlsx'):
-    download_file(url_data, "template.xlsx")    
-if not os.path.exists('data.json'):
-    download_file(url_data, "data.json")
-if not os.path.exists('logo.png'):
-    download_file(url_data, "logo.png")
-if not os.path.exists('app_config.json'):
+        if name == "home":
+            self.home_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.home_frame.grid_forget()
+        if name == "ajuda":
+            self.ajuda_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.ajuda_frame.grid_forget()
+        if name == "configuracao":
+            self.configuracao_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.configuracao_frame.grid_forget()
+
+    def home_button_event(self):
+        self.select_frame_by_name("home")
+
+    def ajuda_button_event(self):
+        self.select_frame_by_name("ajuda")
+
+    def configuracao_button_event(self):
+        self.select_frame_by_name("configuracao")
+        
+    def change_appearance_mode_event(self, new_appearance_mode):
+        ctk.set_appearance_mode(new_appearance_mode)
+        
+if __name__ == "__main__":
     app_config = {
         "diretorio": "",
         "arquivo": ""
-        }
-    json.dump(app_config, open('app_config.json', 'w'), indent=4)
-
-# Carregando os dados em variáveis
-app_config = json.load(open('app_config.json'))
-data = json.load(open('data.json'))
-df = pd.DataFrame(data['cliente'])
-
-# ========================================================================================================
-# Funções
-# ========================================================================================================
-
-# Função para buscar cliente por CNPJ
-def buscar_por_cnpj(df, cnpj):
-    cnpj = cnpj.replace('.', '').replace('/', '').replace('-', '')
-    for cliente in df.iterrows():
-        if cnpj in cliente[1]["CNPJ"]:
-            valores = cliente[1]["CNPJ"].split(";")
-            print(f"valores: {valores}")
-            for valor in valores:
-                if cnpj in valor:
-                    cliente_encontrado = cliente[1].copy() 
-                    cliente_encontrado['CNPJ'] = valor 
-                    return pd.DataFrame([cliente_encontrado])
-    return pd.DataFrame()
-
-# Função para criar o arquivo xlsx
-def criar_xlsx(cliente):
-    template = "template.xlsx"
-    arquivo_saida = f"cliente_{cliente['CNPJ'].values[0]}.xlsx"
-    
-    wb = load_workbook(template)
-    ws = wb.active
-    
-    ws['C4'] = cliente['CNPJ'].values[0]
-    ws['G4'] = cliente['nome_cliente'].values[0].title()
-    ws['G5'] = cliente['endereco_fisico'].values[0].title()
-    ws['G6'] = cliente['estado'].values[0].title()
-    ws['G7'] = cliente['cidade'].values[0].title()
-    ws['H8'] = cliente['party_id'].values[0]
-    
-    wb.save(f"{app_config['diretorio']}/{arquivo_saida}")
-    
-    print(f'Arquivo {arquivo_saida} gerado com sucesso!')
-    
-    if not cliente.empty:
-        print(f'Cliente encontrado: {cliente["nome_cliente"].values[0]}')
+    }
+    if not os.path.exists("app_config.json"):
+        with open("app_config.json", 'w') as f:
+            json.dump(app_config, f, indent=4)
     else:
-        print(f'Cliente com CNPJ {input} não encontrado.')
+        app_config = json.load(open("app_config.json"))
 
-# # Função para selecionar o diretório de saída do arquivo
-# def selecionar_diretorio():
-#     diretorio_saida = filedialog.askdirectory()
-#     diretorio_label.config(text=diretorio_saida)
-#     app_config['diretorio'] = diretorio_saida
-#     json.dump(app_config, open('app_config.json', 'w'), indent=4)
-    
-# Função para salvar o arquivo no diretório selecionado
-def salvar():
-    if app_config['diretorio'] == "":
-        messagebox.showerror("Erro", "Selecione um diretório de saída!")
-        return
-    cliente = buscar_por_cnpj(df, input.get())
-    # criar_xlsx(cliente)
-    atualizar_arquivo(cliente)
-    messagebox.showinfo("Sucesso", "Arquivo gerado com sucesso!")
+    data = json.load(open("data.json"))
+    df = pd.DataFrame(data['cliente'])
 
-def atualizar_arquivo(cliente):
-    arquivo = load_workbook(f"{app_config['diretorio']}/{app_config['arquivo']}")
-    atualizada = arquivo['sheet2']
-    
-    # arquivo_saida = f"cliente_{app_config['diretorio'][-14:-4]}.xlsx"
-    
-    # atualizar os valores
-    atualizada['C4'] = cliente['CNPJ'].values[0]
-    atualizada['G4'] = cliente['nome_cliente'].values[0].title()
-    atualizada['G5'] = cliente['endereco_fisico'].values[0].title()
-    atualizada['G6'] = cliente['estado'].values[0].title()
-    atualizada['G7'] = cliente['cidade'].values[0].title()
-    atualizada['H8'] = cliente['party_id'].values[0]
-    
-    # atualizar o arquivo
-    arquivo.save(f"{app_config['diretorio']}/{app_config['arquivo']}")
-    
-    if not cliente.empty:
-        print(f'Cliente encontrado: {cliente["nome_cliente"].values[0]}')
-    else:
-        print(f'Cliente com CNPJ {input} não encontrado.')
-    
-
-def selecionar_arquivo():
-    diretorio_saida = filedialog.askopenfilename(filetypes=[("Arquivos Excel", "*.xlsx")])
-    resultado = diretorio_saida.split("/")
-    
-    diretorio = "/".join(resultado[:-1])
-    arquivo = resultado[-1]
-    
-    diretorio_label.config(text=f"{diretorio}/{arquivo}")
-    
-    app_config['diretorio'] = diretorio
-    app_config['arquivo'] = arquivo
-    
-    json.dump(app_config, open('app_config.json', 'w'), indent=4)
-    
-# ========================================================================================================
-# Interface
-# ========================================================================================================
-
-# Criação da janela
-janela = Tk()
-janela.title(app["titulo"])
-janela.geometry(app["Conf_Geometry"])
-
-# Elementos da interface
-head = Frame(janela, width=600, height=75, background=app["Header_color"])
-body = Frame(janela, width=600, height=100)
-footer = Frame(janela, width=600, height=50, background=app["Footer_color"])
-
-titulo = Label(head, text=app["titulo"], font=("Arial", 27, "bold"), background=app["Header_color"], foreground=app["titulo_color"], padx=10)
-
-cnpj_label = Label(body, text=app["cpnj_label"], font=("Arial", 12))
-diretorio_label = Label(footer, text=app_config["diretorio"], font=("Arial", 10), background=app["Footer_color"], foreground="white")
-
-input = Entry(body, font=("Arial", 12), border=1, cursor="xterm", width=30)
-
-btn_grid_head = Frame(head, width=100, height=75, background=app["Header_color"])
-btn_grid_body = Frame(body, width=100, height=100)
-
-btn1 = Button(btn_grid_body, text=app["Buttom_salvar"], font=("Arial", 12), background=app["Buttom_salvar_color"],
-                padx=15, pady=5, border=1, activebackground=app["Buttom_salvar_color_active"], cursor="hand2", command=salvar)
-btn2 = Button(btn_grid_body, text=app["Buttom_arquivo"], font=("Arial", 12), background=app["Buttom_arquivo_color"],
-                padx=15, pady=5, border=1, activebackground=app["Buttom_arquivo_color_active"], cursor="hand2", command=selecionar_arquivo)
-btn3 = Button(btn_grid_head, text=app["Buttom_ajuda"], font=("Arial", 12), background=app["Buttom_head_color"],
-                padx=15, pady=5, border=1, activebackground=app["Buttom_head_color_active"], cursor="hand2")
-btn4 = Button(btn_grid_head, text=app["Buttom_sobre"], font=("Arial", 12), background=app["Buttom_head_color"],
-                padx=15, pady=5, border=1, activebackground=app["Buttom_head_color_active"], cursor="hand2")
-
-logo_dir = os.getcwd() + "\\" + app["App_Logo"]
-logo = PhotoImage(file=logo_dir)
-logo_label = Label(footer, image=logo, background=app["Footer_color"])
-        
-# Diagramação dos elementos na interface
-head.pack(side="top")
-head.pack_propagate(False)
-head.grid_propagate(False)
-
-titulo.pack(side="left")
-
-# ainda sem os documentos dos botões
-# btn_grid_head.pack(side="right")
-# btn3.grid(row=0, column=1, padx=5)
-# btn4.grid(row=0, column=2, padx=5)
-
-body.pack(side="top")
-body.grid_propagate(False)
-body.pack_propagate(False)
-
-cnpj_label.grid(row=0, column=0, padx=5, pady=5)
-input.grid(row=1, column=0, padx=15)
-
-btn_grid_body.grid(row=2, column=1)
-btn2.grid(row=0, column=0, padx=5)
-btn1.grid(row=0, column=1, padx=5)
-
-footer.pack(side="bottom")
-footer.grid_propagate(False)
-footer.pack_propagate(False)
-
-diretorio_label.grid(row=0, column=0, padx=2, pady=2)
-logo_label.pack(side="right")
-
-# Exibição da interface
-janela.mainloop()
+    app = App()
+    app.mainloop()
