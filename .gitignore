@@ -1,4 +1,10 @@
+# pastas
 /arquivos
+/build
+/dist
 
+# arquivos
 data.json
 app_config.json
+program.spec
+```
