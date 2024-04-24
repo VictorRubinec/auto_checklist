@@ -3,26 +3,78 @@ import pandas as pd
 import os
 import sys
 import customtkinter as ctk
+import win32com.client
 from openpyxl import load_workbook
 from tkinter import filedialog
 from PIL import Image
 
 references = {
-    "version": "1.2.1",
+    "version": "1.2.2",
 
     "data_file": "data.json",
     "app_config_file": "app_config.json",
 
     "author": "Victor Zanin Rubinec"
 }   
+
+class AtalhoWindow(ctk.CTk):
+    
+    def __init__(self):
+        super().__init__()
+
+        self.title("Instalação")
+        
+        self.atalho_label = ctk.CTkLabel(self, text="Seleicone a localização do atalho:", font=ctk.CTkFont(size=15))
+        self.atalho_label.grid(row=0, column=0, padx=20, pady=20, sticky="w", columnspan=2)
+        
+        self.atalho_input = ctk.CTkButton(self, text="Selecionar", corner_radius=5, height=40, border_spacing=10,
+            width=300, text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), border_width=2, border_color=("gray70", "gray30"),
+            anchor="w", cursor="hand2", fg_color=("gray95", "gray20"), command=self.selecionar_atalho)
+        self.atalho_input.grid(row=1, column=0, padx=30, sticky="w", columnspan=2)
+        
+        self.confirmar_button = ctk.CTkButton(self, text="Confirmar", cursor="hand2", height=35,
+            font=ctk.CTkFont(size=15, weight="bold"), command=self.confirmar_event)
+        self.confirmar_button.grid(row=2, column=1, padx=20, pady=20, sticky="se")
+        
+        self.cancelar_button = ctk.CTkButton(self, text="Cancelar", cursor="hand2", height=35,
+            font=ctk.CTkFont(size=15, weight="bold"), command=self.destroy)
+        self.cancelar_button.grid(row=2, column=0, padx=20, pady=20, sticky="se")
+        
+    def selecionar_atalho(self):
+        self.atalho = filedialog.askdirectory()
+        self.atalho_input.configure(text=self.atalho)
+        
+    def confirmar_event(self):
+        if self.atalho_input._text == "Selecionar" or not self.atalho_input._text or not self.atalho_input._text.strip():
+            self.atalho_input.configure(border_color="red", fg_color="lightcoral", hover_color="lightcoral", text_color=("gray10", "gray20"))
+            return
+        else:
+            self.atalho_input.configure(border_color=("gray70", "gray30"), bg_color=("gray95", "gray20"),
+                fg_color=("gray10", "gray20"), text_color=("gray10", "gray90"))
+            self.criar_atalho(self.atalho)
+            
+    def criar_atalho(self, diretorio):
+        caminho_executavel = os.path.join(os.path.dirname(sys.executable), "Auto_CheckList.py")
+
+        # Cria o atalho
+        shell = win32com.client.Dispatch("WScript.Shell")
+        atalho = shell.CreateShortcut(os.path.join(diretorio, "Auto_Checklist.lnk"))
+        atalho.TargetPath = caminho_executavel
+        atalho.WorkingDirectory = os.path.dirname(caminho_executavel)
+        atalho.save()
+
+        print(f"Atalho para 'programa' criado em '{os.path.join(diretorio, 'Auto_Checklist.lnk')}'")
+
+        # Fecha a janela após criar o atalho
+        self.destroy()
        
 class App(ctk.CTk):
         
     def __init__(self):
         super().__init__()
 
-        self.title("Auto Faturamento")
-        self.geometry("700x400")
+        self.title("Auto CheckList")
+        self.geometry("650x400")
         
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -49,7 +101,7 @@ class App(ctk.CTk):
         self.navegacao_frame.grid(row=0, column=0, sticky="nsew")
         self.navegacao_frame.grid_rowconfigure(4, weight=1)
 
-        self.navegacao_frame_label = ctk.CTkLabel(self.navegacao_frame, text="Auto Faturamento",
+        self.navegacao_frame_label = ctk.CTkLabel(self.navegacao_frame, text="Auto CheckList",
             compound="left", font=ctk.CTkFont(size=20, weight="bold"))
         self.navegacao_frame_label.grid(row=0, column=0, padx=20, pady=20)
         
@@ -107,7 +159,7 @@ class App(ctk.CTk):
         self.ajuda_frame.grid_columnconfigure(0, weight=1)
         self.ajuda_frame.grid_rowconfigure(10, weight=1)
         
-        self.ajuda_titulo = ctk.CTkLabel(self.ajuda_frame, text="Bem-vindo à seção de \nAjuda do Auto Faturamento!",
+        self.ajuda_titulo = ctk.CTkLabel(self.ajuda_frame, text="Bem-vindo à seção de \nAjuda do Auto CheckList!",
             font=ctk.CTkFont(size=20, weight="bold"))
         self.ajuda_titulo.grid(row=0, column=0, padx=15, pady=10, sticky="n")
         
@@ -147,7 +199,7 @@ class App(ctk.CTk):
             font=ctk.CTkFont(size=12), wraplength=430, justify="left")
         self.ajuda_texto_topico4.grid(row=9, column=0, padx=15, pady=5, sticky="w")
 
-        self.ajuda_texto_final = ctk.CTkLabel(self.ajuda_frame, text="  Caso tenha alguma dúvida adicional, sinta-se à vontade para entrar em contato conosco.\n\n  Obrigado por utilizar o Auto Faturamento!",
+        self.ajuda_texto_final = ctk.CTkLabel(self.ajuda_frame, text="  Caso tenha alguma dúvida adicional, sinta-se à vontade para entrar em contato conosco.\n\n  Obrigado por utilizar o Auto CheckList!",
             font=ctk.CTkFont(size=12), wraplength=430, justify="left")
         self.ajuda_texto_final.grid(row=10, column=0, padx=15, pady=5, sticky="w")
         
@@ -330,28 +382,38 @@ class App(ctk.CTk):
         
 if __name__ == "__main__":
     
-    app_config = {
-        "diretorio": "",
-        "arquivo": ""
-    }
-    
     def get_config_path():
         if getattr(sys, 'frozen', False):
             # Se o programa estiver empacotado como um executável
             return os.path.join(os.path.dirname(sys.executable), "config")
         else:
             # Se estiver em modo de desenvolvimento
-            return os.path.join(os.path.dirname(os.path.abspath(__file__)), "config")
-        
+            return os.path.join(os.path.dirname(os.path.abspath(__file__)), "config")            
+                
+    app_config_model = {
+        "diretorio": "",
+        "arquivo": ""
+    }
+    
     config_path = get_config_path()
     
     app_config_file = os.path.join(config_path, "app_config.json")
     data_file = os.path.join(config_path, "data.json")
     
-    if not os.path.exists(app_config_file):
-        with open(app_config_file, 'w') as f:
-            json.dump(app_config, f, indent=4)
+    if getattr(sys, 'frozen', False):
+        if not os.path.exists(app_config_file):
+            
+            atalho_window = AtalhoWindow()
+            atalho_window.mainloop()
+            
+            with open(app_config_file, 'w') as f:
+                json.dump(app_config_model, f, indent=4)
+            app_config = json.load(open(app_config_file))
+        else:
+            app_config = json.load(open(app_config_file))
     else:
+        with open(app_config_file, 'w') as f:
+            json.dump(app_config_model, f, indent=4)
         app_config = json.load(open(app_config_file))
 
     data = json.load(open(data_file))

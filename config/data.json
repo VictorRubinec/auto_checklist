@@ -1,0 +1,20 @@
+{
+    "cliente": [
+        {
+            "CNPJ": "12345678901111",
+            "party_id": 1234567891,
+            "nome_cliente": "Empresa A",
+            "endereco_fisico": "Rua A",
+            "estado": "São Paulo",
+            "cidade": "Cidade A"
+        },
+        {
+            "CNPJ": "12345678901112",
+            "party_id": 9876543219,
+            "nome_cliente": "Cidade B",
+            "endereco_fisico": "Rua B",
+            "estado": "São Paulo",
+            "cidade": "Cidade B"
+        }
+    ]
+}
